@@ -1,0 +1,11 @@
+{
+  "name": "tempshare-monorepo",
+  "version": "1.0.0",
+  "description": "TempShare - Secure Temporary File & Text Sharing Platform",
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "test": "cd server && node test/e2e.test.js"
+  }
+}

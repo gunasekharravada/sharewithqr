@@ -1,20 +1,23 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Camera, KeyRound, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { Camera, AlertCircle, Loader2 } from 'lucide-react';
 import { QrScannerModal } from '../components/QrScannerModal.jsx';
 import { api } from '../services/api.js';
 import { toast } from '../utils/toast.js';
+import { getFriendlyError } from '../utils/errors.js';
 
 export function ReceivePage() {
   const navigate = useNavigate();
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [error, setError] = useState(null); // { title, message }
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const handleDigitChange = (index, value) => {
-    // Handle paste of whole 6-digit code
+    setError(null);
+
+    // Handle paste of a whole 6-digit code
     if (value.length > 1) {
       const clean = value.replace(/\D/g, '').slice(0, 6);
       if (clean.length > 0) {
@@ -43,6 +46,10 @@ export function ReceivePage() {
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !digits[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
@@ -50,29 +57,28 @@ export function ReceivePage() {
 
   const handleVerify = async (e) => {
     if (e) e.preventDefault();
+    if (loading) return;
+
     if (fullOtp.length !== 6) {
-      setErrorMessage('Please enter the complete 6-digit share code.');
+      setError({ title: 'Enter the full code', message: 'The access code has 6 digits.' });
       return;
     }
 
     setLoading(true);
-    setErrorMessage('');
+    setError(null);
 
     try {
       const result = await api.verifyOtp(fullOtp);
-      toast.success('Share found! Loading content...');
       navigate(`/s/${result.shareToken}`);
     } catch (err) {
-      setErrorMessage(err.message || 'The code you entered is invalid or expired.');
-      toast.error(err.message || 'Verification failed');
-    } finally {
+      setError(getFriendlyError(err));
       setLoading(false);
     }
   };
 
   const handleScanSuccess = (decodedText) => {
     setScannerOpen(false);
-    // Parse URL to check if it matches /s/:token
+    // A TempShare link contains /s/:token
     try {
       if (decodedText.includes('/s/')) {
         const parts = decodedText.split('/s/');
@@ -82,121 +88,129 @@ export function ReceivePage() {
           return;
         }
       }
-      
-      // If it is just a 6-digit OTP in the QR
+
+      // Or just a 6-digit code
       const clean = decodedText.replace(/\D/g, '');
       if (clean.length === 6) {
-        const newDigits = clean.split('');
-        setDigits(newDigits);
+        setDigits(clean.split(''));
+        setLoading(true);
         api.verifyOtp(clean).then((res) => {
           navigate(`/s/${res.shareToken}`);
         }).catch((err) => {
-          setErrorMessage(err.message || 'Invalid code from QR.');
+          setError(getFriendlyError(err));
+          setLoading(false);
         });
         return;
       }
 
-      toast.error('Scanned QR code does not appear to be a valid TempShare link.');
-    } catch (err) {
-      toast.error('Could not process scanned QR code.');
+      toast.error({ title: 'Not a TempShare code', message: 'That QR code does not open a TempShare share.' });
+    } catch {
+      toast.error({ title: 'Something went wrong', message: 'We could not read that QR code. Please try again.' });
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-12 sm:py-20 space-y-8">
-      
+    <div className="mx-auto w-full max-w-md px-4 py-6 sm:px-6 sm:py-8 [@media(min-height:860px)]:sm:py-16">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400 mb-4 shadow-lg shadow-blue-500/10">
-          <Download className="w-7 h-7" />
-        </div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
-          Receive a Temporary Share
+      <div className="mb-4 text-center sm:mb-5 [@media(min-height:860px)]:sm:mb-8">
+        <h1 className="text-[clamp(1.5rem,4.5vw,2.25rem)] font-bold leading-tight tracking-tight text-white">
+          Receive a Share
         </h1>
-        <p className="text-sm text-slate-400 max-w-sm mx-auto">
-          Enter the 6-digit code or scan the QR code to access the files or text.
+        <p className="mx-auto mt-1.5 max-w-sm text-sm text-slate-400">
+          Enter the access code or scan the QR code to open your temporary share.
         </p>
       </div>
 
-      {/* Main Card */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-        
-        {errorMessage && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
+      <div className="card space-y-4 p-4 sm:space-y-5 sm:p-6">
+        <form onSubmit={handleVerify} noValidate className="space-y-4">
+          <div role="group" aria-labelledby="code-label" className="space-y-3">
+            <p id="code-label" className="text-center text-xs font-medium uppercase tracking-wider text-slate-400">
+              6-digit access code
+            </p>
 
-        <form onSubmit={handleVerify} className="space-y-6">
-          <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Enter 6-Digit Code
-            </label>
-
-            {/* 6-Digit Inputs */}
-            <div className="flex items-center justify-center gap-2 sm:gap-3">
+            <div className="grid grid-cols-6 gap-1.5 sm:gap-2.5">
               {digits.map((digit, idx) => (
                 <input
                   key={idx}
                   ref={(el) => (inputRefs.current[idx] = el)}
                   type="text"
                   inputMode="numeric"
+                  autoComplete={idx === 0 ? 'one-time-code' : 'off'}
                   maxLength={6}
                   value={digit}
                   autoFocus={idx === 0}
+                  aria-label={`Digit ${idx + 1} of 6`}
+                  aria-invalid={error ? 'true' : undefined}
+                  aria-describedby={error ? 'receive-error' : undefined}
                   onChange={(e) => handleDigitChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
-                  className="w-11 h-14 sm:w-14 sm:h-16 text-center text-2xl sm:text-3xl font-bold font-mono text-white bg-slate-950 border-2 border-slate-700/80 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl outline-none transition-all"
+                  onFocus={(e) => e.target.select()}
+                  className={`h-14 w-full min-w-0 rounded-lg border bg-slate-950 text-center font-mono text-2xl font-semibold text-white transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:h-14 sm:rounded-xl sm:text-3xl [@media(min-height:800px)]:sm:h-16 ${
+                    error ? 'border-rose-500/60' : 'border-slate-700'
+                  }`}
                 />
               ))}
             </div>
           </div>
 
+          {error && (
+            <div id="receive-error" role="alert" className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-sm">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
+              <div>
+                <p className="font-semibold text-rose-100">{error.title}</p>
+                <p className="mt-0.5 text-rose-200/90">{error.message}</p>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={fullOtp.length !== 6 || loading}
-            className="w-full py-4 rounded-2xl text-base font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2 transform active:scale-[0.99]"
+            aria-busy={loading}
+            className="btn btn-primary btn-lg w-full"
           >
             {loading ? (
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 animate-spin" />
-                Accessing Share...
-              </span>
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                Checking Share…
+              </>
             ) : (
-              <span className="flex items-center gap-2">
-                <Download className="w-5 h-5" />
-                Receive Content
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </span>
+              'Receive Share'
             )}
           </button>
         </form>
 
-        {/* QR Code Scanner Option */}
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-xs font-semibold uppercase text-slate-500">OR</span>
-          <div className="flex-grow border-t border-slate-800"></div>
+        {/* OR divider */}
+        <div className="flex items-center gap-4" aria-hidden="true">
+          <div className="h-px flex-1 bg-slate-800" />
+          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">or</span>
+          <div className="h-px flex-1 bg-slate-800" />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setScannerOpen(true)}
-          className="w-full py-3.5 rounded-2xl text-sm font-semibold text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition-colors flex items-center justify-center gap-2.5"
-        >
-          <Camera className="w-4 h-4 text-purple-400" />
-          Scan QR Code with Camera
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="btn btn-secondary w-full"
+          >
+            <Camera className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            Scan QR Code
+          </button>
+          <p className="text-center text-xs text-slate-500">
+            Uses your camera only to read the code. Nothing is recorded or uploaded.
+          </p>
+        </div>
       </div>
 
-      {/* QR Scanner Modal */}
+      <p className="mt-5 hidden text-center text-sm text-slate-500 [@media(min-height:820px)]:block">
+        Your temporary share will open here once the code is checked.
+      </p>
+
       <QrScannerModal
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
       />
-
     </div>
   );
 }

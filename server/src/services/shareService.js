@@ -8,9 +8,17 @@ import { createStorageQuota } from './storageQuota.js';
 
 const storageQuota = createStorageQuota({ db, config });
 
-// Share lifetime is fixed and enforced server-side; never taken from the client.
-function shareExpiryDate() {
-  return new Date(Date.now() + config.shareExpiryMinutes * 60 * 1000).toISOString();
+// Share lifetime is enforced server-side: only the allowed durations (5 or 10
+// minutes) are accepted from the client; anything else uses the default.
+function resolveExpiryMinutes(requested) {
+  const minutes = parseInt(requested, 10);
+  return config.shareExpiryOptionsMinutes.includes(minutes)
+    ? minutes
+    : config.shareExpiryDefaultMinutes;
+}
+
+function shareExpiryDate(requestedMinutes) {
+  return new Date(Date.now() + resolveExpiryMinutes(requestedMinutes) * 60 * 1000).toISOString();
 }
 
 // Shares created before PIN protection was removed still carry a pin_hash
@@ -44,7 +52,7 @@ export const shareService = {
   /**
    * Create a text share
    */
-  async createTextShare({ text, maxAccesses = 0 }) {
+  async createTextShare({ text, maxAccesses = 0, expiryMinutes }) {
     if (!validator.isValidText(text)) {
       throw new Error('Invalid text content or exceeds 100,000 characters limit');
     }
@@ -53,7 +61,7 @@ export const shareService = {
     const otpHash = cryptoUtils.hashOtp(otp);
     const shareToken = cryptoUtils.generateShareToken();
 
-    const expiresAt = shareExpiryDate();
+    const expiresAt = shareExpiryDate(expiryMinutes);
     const maxAcc = parseInt(maxAccesses, 10) || 0;
 
     let insertQuery = '';
@@ -78,9 +86,15 @@ export const shareService = {
       params = [shareToken, otpHash, 'text', text, expiresAt, maxAcc];
     }
 
-    await db.query(insertQuery, params);
+    // The QR only needs the share URL, which is already known from the
+    // token generated above — it does not need to wait for the database
+    // write to finish. Running them together removes one full round trip
+    // from Create Share.
     const shareUrl = `${config.appUrl}/s/${shareToken}`;
-    const qrCode = await qrService.generateDataUrl(shareUrl);
+    const [, qrCode] = await Promise.all([
+      db.query(insertQuery, params),
+      qrService.generateDataUrl(shareUrl)
+    ]);
 
     return {
       shareToken,
@@ -96,7 +110,7 @@ export const shareService = {
   /**
    * Create a multi-file / folder share via backend upload
    */
-  async createFilesShare({ files, paths = [], maxAccesses = 0 }) {
+  async createFilesShare({ files, paths = [], maxAccesses = 0, expiryMinutes }) {
     if (!files || files.length === 0) {
       throw new Error('No files uploaded');
     }
@@ -105,7 +119,7 @@ export const shareService = {
     const otpHash = cryptoUtils.hashOtp(otp);
     const shareToken = cryptoUtils.generateShareToken();
 
-    const expiresAt = shareExpiryDate();
+    const expiresAt = shareExpiryDate(expiryMinutes);
     const maxAcc = parseInt(maxAccesses, 10) || 0;
 
     const prepared = files.map((f, i) => {
@@ -180,16 +194,25 @@ export const shareService = {
       return { shareId: id, insertedFiles: rows };
     });
 
-    // Phase 2: upload to storage (outside the lock). If this fails, remove the
-    // reservation and anything already uploaded.
+    // Phase 2: upload to storage (outside the lock). Each file is an
+    // independent network call to Supabase, so they run concurrently
+    // instead of one after another — for N files this turns N round trips
+    // into roughly one. The QR only needs the share URL (known already),
+    // so it's generated at the same time rather than after every upload
+    // finishes. If any upload fails, the reservation and any objects that
+    // did finish uploading are removed.
+    const shareUrl = `${config.appUrl}/s/${shareToken}`;
     const uploadedKeys = [];
+    let qrCode;
     try {
-      for (const p of prepared) {
-        if (p.buffer) {
-          await storageService.uploadBuffer(p.storageKey, p.buffer, p.mimeType);
-          uploadedKeys.push(p.storageKey);
-        }
-      }
+      const uploads = prepared
+        .filter((p) => p.buffer)
+        .map((p) =>
+          storageService.uploadBuffer(p.storageKey, p.buffer, p.mimeType).then(() => {
+            uploadedKeys.push(p.storageKey);
+          })
+        );
+      [qrCode] = await Promise.all([qrService.generateDataUrl(shareUrl), ...uploads]);
     } catch (err) {
       console.error('[Share] Storage upload failed; discarding share:', err.message);
       await discardShare(shareId, uploadedKeys);
@@ -197,9 +220,6 @@ export const shareService = {
       failure.statusCode = 502;
       throw failure;
     }
-
-    const shareUrl = `${config.appUrl}/s/${shareToken}`;
-    const qrCode = await qrService.generateDataUrl(shareUrl);
 
     return {
       shareToken,
@@ -217,7 +237,7 @@ export const shareService = {
   /**
    * Request Presigned Direct Upload URLs for Cloudflare R2
    */
-  async requestDirectUploadUrls({ fileMetadata = [], maxAccesses = 0 }) {
+  async requestDirectUploadUrls({ fileMetadata = [], maxAccesses = 0, expiryMinutes }) {
     if (!fileMetadata || fileMetadata.length === 0) {
       throw new Error('No files provided');
     }
@@ -235,7 +255,7 @@ export const shareService = {
     const otpHash = cryptoUtils.hashOtp(otp);
     const shareToken = cryptoUtils.generateShareToken();
 
-    const expiresAt = shareExpiryDate();
+    const expiresAt = shareExpiryDate(expiryMinutes);
     const maxAcc = parseInt(maxAccesses, 10) || 0;
 
     const { shareId, items } = await storageQuota.withCapacity(totalBytes, async (tx) => {

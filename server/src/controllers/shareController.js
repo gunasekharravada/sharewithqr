@@ -9,10 +9,11 @@ export const shareController = {
    */
   async createTextShare(req, res, next) {
     try {
-      const { text, maxAccesses } = req.body;
+      const { text, maxAccesses, expiryMinutes } = req.body;
       const result = await shareService.createTextShare({
         text,
-        maxAccesses
+        maxAccesses,
+        expiryMinutes
       });
 
       return res.status(201).json({
@@ -30,7 +31,7 @@ export const shareController = {
   async createFilesShare(req, res, next) {
     try {
       const files = req.files;
-      const { paths, maxAccesses } = req.body;
+      const { paths, maxAccesses, expiryMinutes } = req.body;
 
       let parsedPaths = [];
       if (typeof paths === 'string') {
@@ -46,7 +47,8 @@ export const shareController = {
       const result = await shareService.createFilesShare({
         files,
         paths: parsedPaths,
-        maxAccesses
+        maxAccesses,
+        expiryMinutes
       });
 
       return res.status(201).json({
@@ -63,10 +65,11 @@ export const shareController = {
    */
   async requestDirectUploadUrls(req, res, next) {
     try {
-      const { fileMetadata, maxAccesses } = req.body;
+      const { fileMetadata, maxAccesses, expiryMinutes } = req.body;
       const result = await shareService.requestDirectUploadUrls({
         fileMetadata,
-        maxAccesses
+        maxAccesses,
+        expiryMinutes
       });
 
       return res.status(201).json({

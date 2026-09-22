@@ -1,175 +1,206 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Send, Download, ShieldCheck, Zap, Clock, QrCode, FolderUp, FileText, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { api } from '../services/api.js';
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Sparkles,
+  FileText,
+  Image,
+  FileType,
+  StickyNote,
+  Files,
+  UserX,
+  MonitorSmartphone,
+  Timer
+} from 'lucide-react';
+
+// Keep in sync with the server's MAX_FILE_SIZE_MB (Supabase Free plan: 50 MB per file)
+const MAX_FILE_SIZE_MB = Number(import.meta.env.VITE_MAX_FILE_SIZE_MB) || 50;
+
+const CATEGORIES = [
+  { label: 'Documents', icon: FileText },
+  { label: 'Images', icon: Image },
+  { label: 'PDFs', icon: FileType },
+  { label: 'Text', icon: FileText },
+  { label: 'Notes', icon: StickyNote },
+  { label: 'Other files', icon: Files }
+];
+
+const BENEFITS = [
+  { title: 'No Signup', text: 'Start sharing instantly without creating an account.', icon: UserX },
+  { title: 'No App', text: 'Works directly in your browser.', icon: MonitorSmartphone },
+  { title: 'Temporary', text: 'Shares automatically expire after the selected time.', icon: Timer }
+];
+
+const STEPS = [
+  { n: '01', title: 'Create', text: 'Choose what you want to share and set how long it should remain available.' },
+  { n: '02', title: 'Share', text: 'Get an access code and a QR code.' },
+  { n: '03', title: 'Receive', text: 'The recipient uses the OTP or scans the QR code to access the share.' }
+];
+
+const CHARACTERISTICS = [
+  'No account required',
+  'OTP + QR access',
+  'Temporary expiration',
+  'Private cloud storage',
+  `File size protection (${MAX_FILE_SIZE_MB} MB per file)`,
+  'Access limits',
+  'Automatic cleanup'
+];
 
 export function Home() {
-  const [stats, setStats] = useState({ activeShares: 0, totalFilesShared: 0 });
-
-  useEffect(() => {
-    api.getStats().then(setStats).catch(() => {});
-  }, []);
-
   return (
-    <div className="space-y-24 py-8 sm:py-16">
-      
-      {/* 1. Hero Section */}
-      <section className="text-center max-w-4xl mx-auto px-4 space-y-8">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider animate-pulse">
-          <Sparkles className="w-3.5 h-3.5" />
-          No Signup • No App • Disappears Automatically
+    <div>
+      {/* HERO */}
+      <section className="mx-auto max-w-6xl px-4 pb-14 pt-14 text-center sm:px-6 sm:pb-20 sm:pt-20 lg:pt-28">
+        {/* Trust badge */}
+        <div className="mx-auto inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-center text-[11px] font-semibold uppercase leading-snug tracking-wider text-blue-400 sm:text-xs">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>No Signup • No App • Disappears Automatically</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1]">
-          Share Anything. <br />
-          <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Temporarily.
-          </span>
+        <h1 className="mx-auto mt-6 max-w-3xl text-[clamp(2.25rem,7vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-white">
+          Share Anything. <span className="text-blue-400">Temporarily.</span>
         </h1>
-
-        <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-          Files, documents, source code, and text snippets. Share securely via a 6-digit code or QR, and let it disappear when you’re done.
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+          Send text and files with a simple OTP or QR code. No account. No app. No clutter.
+          Just share it and let it disappear when it expires.
         </p>
 
-        {/* Hero CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-          <Link
-            to="/send"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 shadow-xl shadow-blue-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-          >
-            <Send className="w-5 h-5" />
-            Start Sharing Now
-            <ArrowRight className="w-4 h-4 ml-1" />
+        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+          <Link to="/send" className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 bg-blue-600 text-white hover:bg-blue-500">
+            Start Sharing
+            <ArrowRight className="h-5 w-5" aria-hidden="true" />
           </Link>
-
-          <Link
-            to="/receive"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl text-base font-semibold text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 shadow-lg transition-all transform hover:-translate-y-0.5"
-          >
-            <Download className="w-5 h-5 text-blue-400" />
+          <Link to="/receive" className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 border border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700">
             Receive a Share
           </Link>
         </div>
 
-        {/* Value props badges */}
-        <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-medium text-slate-400">
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> 50 MB Max Per File</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> 6-Digit OTP & QR Code</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Auto-Expiring Storage</span>
-        </div>
+        {/* Quick facts */}
+        <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-slate-400 sm:text-sm">
+          <li className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            {MAX_FILE_SIZE_MB} MB Max Per File
+          </li>
+          <li className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            6-Digit OTP &amp; QR Code
+          </li>
+          <li className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            Auto-Expiring Storage
+          </li>
+        </ul>
       </section>
 
-      {/* 2. How It Works (3 Steps) */}
-      <section className="max-w-6xl mx-auto px-4 space-y-12">
-        <div className="text-center space-y-3">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            How TempShare Works
+      {/* WHAT YOU CAN SHARE */}
+      <section className="border-t border-slate-800/80">
+        <div className="mx-auto max-w-6xl px-4 py-14 text-center sm:px-6 sm:py-20">
+          <h2 className="text-[clamp(1.5rem,4vw,2.25rem)] font-bold tracking-tight text-white">
+            Share What You Need. Nothing More.
           </h2>
-          <p className="text-sm text-slate-400 max-w-lg mx-auto">
-            A frictionless temporary bridge between any two devices online.
+          <p className="mx-auto mt-3 max-w-2xl text-slate-400">
+            Send files or text when you need to move something quickly without creating another
+            account or keeping it around forever.
           </p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-800/40 border border-slate-800 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition-colors">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-lg">
-              1
-            </div>
-            <h3 className="text-lg font-bold text-slate-100">Upload or Paste</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Drop files, folders, or paste text up to 100k characters. Every share expires automatically after 10 minutes.
-            </p>
-          </div>
-
-          <div className="bg-slate-800/40 border border-slate-800 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition-colors">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-lg">
-              2
-            </div>
-            <h3 className="text-lg font-bold text-slate-100">Get OTP & QR</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Instantly receive a unique, unguessable 6-digit code and a scannable QR code. No signup required.
-            </p>
-          </div>
-
-          <div className="bg-slate-800/40 border border-slate-800 rounded-3xl p-6 space-y-4 hover:border-slate-700 transition-colors">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-lg">
-              3
-            </div>
-            <h3 className="text-lg font-bold text-slate-100">Disappears Forever</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Receiver downloads or reads the content. Once expired, files and records are purged completely.
-            </p>
-          </div>
+          <ul className="mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-center gap-2.5">
+            {CATEGORIES.map(({ label, icon: Icon }) => (
+              <li
+                key={label}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm text-slate-200"
+              >
+                <Icon className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                {label}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm text-slate-500">Up to {MAX_FILE_SIZE_MB} MB per file.</p>
         </div>
       </section>
 
-      {/* 3. Feature Highlights Grid */}
-      <section className="max-w-6xl mx-auto px-4 space-y-12">
-        <div className="text-center space-y-3">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Built for Speed and Security
+      {/* NO SIGNUP / NO APP / TEMPORARY */}
+      <section className="border-t border-slate-800/80 bg-slate-900/30">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-10 sm:px-6 md:grid-cols-3 md:py-14">
+          {BENEFITS.map(({ title, text, icon: Icon }) => (
+            <div key={title} className="flex items-start gap-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-blue-400">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="font-semibold text-white">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-400">{text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="border-t border-slate-800/80">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+          <h2 className="text-center text-[clamp(1.5rem,4vw,2.25rem)] font-bold tracking-tight text-white">
+            How It Works
           </h2>
-          <p className="text-sm text-slate-400 max-w-lg mx-auto">
-            Everything you need for safe temporary transfers without lingering data.
+
+          <ol className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
+            {STEPS.map((step) => (
+              <li key={step.n} className="text-center md:text-left">
+                <span className="font-mono text-sm font-semibold text-blue-400">{step.n}</span>
+                <h3 className="mt-2 text-xl font-semibold text-white">{step.title}</h3>
+                <p className="mt-2 leading-relaxed text-slate-400">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-10 text-center text-sm text-slate-500">
+            When the share expires, it is no longer available.
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="p-6 rounded-2xl bg-slate-800/30 border border-slate-800 space-y-3">
-            <QrCode className="w-6 h-6 text-purple-400" />
-            <h4 className="text-base font-bold text-slate-100">Scannable QR Access</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Scan directly from phone cameras or laptops for zero-typing transfers between devices.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-800/30 border border-slate-800 space-y-3">
-            <FolderUp className="w-6 h-6 text-cyan-400" />
-            <h4 className="text-base font-bold text-slate-100">Multi-File & Folder Trees</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Upload multiple files and preserve project directory hierarchies with one single share code.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-800/30 border border-slate-800 space-y-3">
-            <Clock className="w-6 h-6 text-blue-400" />
-            <h4 className="text-base font-bold text-slate-100">Automated Background Purge</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              A background cleanup daemon purges storage objects continuously every minute.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-800/30 border border-slate-800 space-y-3">
-            <ShieldCheck className="w-6 h-6 text-indigo-400" />
-            <h4 className="text-base font-bold text-slate-100">Rate-Limited & Secure</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Crypto-random OTPs with lockout protection against brute-force guessing attempts.
-            </p>
-          </div>
         </div>
       </section>
 
-      {/* 4. Bottom CTA banner */}
-      <section className="max-w-5xl mx-auto px-4">
-        <div className="rounded-3xl bg-gradient-to-r from-blue-900/60 via-indigo-900/60 to-purple-900/60 border border-blue-500/30 p-8 sm:p-12 text-center space-y-6 backdrop-blur-xl">
-          <h3 className="text-2xl sm:text-4xl font-extrabold text-white">
-            Ready to send something securely?
-          </h3>
-          <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto">
-            No signup. No personal data collected. Simply drag, share, and let it expire.
+      {/* CTA */}
+      <section className="border-t border-slate-800/80 bg-slate-900/30">
+        <div className="mx-auto max-w-3xl px-4 py-14 text-center sm:px-6 sm:py-20">
+          <h2 className="text-[clamp(1.5rem,4vw,2.25rem)] font-bold tracking-tight text-white">
+            Ready to Send Something?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-slate-400">
+            Create a temporary share in seconds. No signup. No app. Just send it.
           </p>
-          <div className="pt-2">
-            <Link
-              to="/send"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-500/30 transition-all active:scale-95"
-            >
-              <Send className="w-4 h-4" />
-              Create a Temporary Share
-            </Link>
-          </div>
+          <Link to="/send" className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 bg-blue-600 text-white hover:bg-blue-500 mt-8">
+            Start Sharing
+            <ArrowRight className="h-5 w-5" aria-hidden="true" />
+          </Link>
         </div>
       </section>
 
+      {/* PRODUCT CREDENTIALS */}
+      <section className="border-t border-slate-800/80">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <h2 className="text-[clamp(1.5rem,4vw,2.25rem)] font-bold tracking-tight text-white">
+              Built for Simple, Temporary Sharing
+            </h2>
+            <p className="mt-4 leading-relaxed text-slate-400">
+              TempShare is designed around one simple idea: sharing should not require creating an
+              account or leaving files online indefinitely. Create a temporary share, give someone
+              access through an OTP or QR code, and let the share expire when its time is up.
+            </p>
+          </div>
+
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {CHARACTERISTICS.map((item) => (
+              <li key={item} className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" aria-hidden="true" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
     </div>
   );
 }

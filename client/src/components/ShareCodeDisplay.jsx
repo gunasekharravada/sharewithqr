@@ -1,50 +1,52 @@
 import React, { useState } from 'react';
-import { Copy, Check, KeyRound } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
+import { copyText } from '../utils/clipboard.js';
 import { toast } from '../utils/toast.js';
 
 export function ShareCodeDisplay({ code }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    if (!code) return;
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    toast.success('6-Digit OTP copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const ok = await copyText(code);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error("Couldn't copy the code. Select the digits and copy them manually.");
+    }
   };
 
-  const digits = (code || '000000').split('');
+  const digits = (code || '').split('');
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="flex items-center gap-2">
-        <KeyRound className="w-4 h-4 text-blue-400" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          6-Digit Share Code
-        </span>
-      </div>
+    <div className="w-full text-center">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Access Code</p>
 
-      {/* Digits Display */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div
+        className="mx-auto mt-3 grid w-full max-w-[20rem] select-all grid-cols-6 gap-1.5 sm:gap-2"
+        aria-label={`Access code ${digits.join(' ')}`}
+        role="group"
+      >
         {digits.map((digit, idx) => (
           <div
             key={idx}
-            className="w-11 h-14 sm:w-14 sm:h-18 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-blue-500/40 shadow-xl shadow-blue-500/10 flex items-center justify-center text-2xl sm:text-3xl font-extrabold text-blue-400 font-mono select-all hover:border-blue-400 transition-colors"
+            aria-hidden="true"
+            className="flex aspect-[4/5] items-center justify-center rounded-lg border-2 border-blue-500/40 bg-gradient-to-b from-slate-800 to-slate-900 font-mono text-[clamp(1.2rem,5vw,1.65rem)] font-extrabold text-blue-400"
           >
             {digit}
           </div>
         ))}
       </div>
 
-      {/* Copy button */}
       <button
         type="button"
         onClick={handleCopy}
-        className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition-all active:scale-95"
+        className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 text-sm font-semibold text-slate-100 transition-colors hover:bg-slate-700 sm:w-auto"
       >
-        {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-        {copied ? 'Code Copied!' : 'Copy 6-Digit Code'}
+        {copied ? <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+        {copied ? 'Copied' : 'Copy Code'}
       </button>
+      <span className="sr-only" aria-live="polite">{copied ? 'Code copied to clipboard' : ''}</span>
     </div>
   );
 }

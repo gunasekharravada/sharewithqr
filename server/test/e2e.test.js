@@ -118,7 +118,7 @@ async function runTests() {
   console.log('✓ Direct presigned upload endpoint verified');
 
   // 5. Fixed 10-minute expiry (client input must be ignored)
-  console.log('\n[5/9] Testing Fixed 10-Minute Expiry...');
+  console.log('\n[5/9] Testing Share Expiry (5 or 10 minutes, default 10)...');
   const beforeCreate = Date.now();
   const expiryShareRes = await fetch(`${BASE_URL}/shares/text`, {
     method: 'POST',
@@ -139,7 +139,29 @@ async function runTests() {
   );
   assert.strictEqual(expiryShareData.data.hasPin, undefined, 'PIN feature must be gone');
   assert.strictEqual(expiryShareData.data.burnAfterRead, undefined, 'Burn feature must be gone');
-  console.log('✓ Share expires after 10 minutes regardless of client-supplied expiryMinutes');
+  console.log('✓ Unsupported expiryMinutes (60) is ignored: share expires after the 10-minute default');
+
+  const fiveStart = Date.now();
+  const fiveRes = await fetch(`${BASE_URL}/shares/text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: 'Five minute share', expiryMinutes: 5 })
+  });
+  const fiveData = await fiveRes.json();
+  const fiveMs = new Date(fiveData.data.expiresAt).getTime() - fiveStart;
+  assert(Math.abs(fiveMs - 5 * 60 * 1000) < 60 * 1000, `expiryMinutes=5 must give 5 minutes (got ${Math.round(fiveMs / 1000)}s)`);
+  console.log('✓ expiryMinutes=5 is honoured (5 minutes)');
+
+  const defaultStart = Date.now();
+  const defRes = await fetch(`${BASE_URL}/shares/text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: 'Default expiry share' })
+  });
+  const defData = await defRes.json();
+  const defMs = new Date(defData.data.expiresAt).getTime() - defaultStart;
+  assert(Math.abs(defMs - 10 * 60 * 1000) < 60 * 1000, 'No expiryMinutes must default to 10 minutes');
+  console.log('✓ Default expiry is 10 minutes');
 
   // No PIN gate and no burn on read for new shares
   const readOnce = await fetch(`${BASE_URL}/shares/${expiryShareData.data.shareToken}`);

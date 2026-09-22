@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileUploader } from '../components/FileUploader.jsx';
 import { TextEditor } from '../components/TextEditor.jsx';
@@ -6,47 +6,51 @@ import { ExpirySelector } from '../components/ExpirySelector.jsx';
 import { ProgressBar } from '../components/ProgressBar.jsx';
 import { api } from '../services/api.js';
 import { toast } from '../utils/toast.js';
-import { Upload, FileText, Send, Sparkles, AlertCircle } from 'lucide-react';
+import { getFriendlyError } from '../utils/errors.js';
+import { DEFAULT_EXPIRY_MINUTES } from '../utils/constants.js';
+import { Upload, FileText, Loader2, AlertCircle } from 'lucide-react';
 
 export function SendPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('files'); // 'files' | 'text'
   const [files, setFiles] = useState([]);
   const [text, setText] = useState('');
-  
-  // Access options (shares always expire after a fixed 10 minutes, enforced by the server)
+
+  // Options (the backend only accepts 5 or 10 minutes; default 10)
+  const [expiryMinutes, setExpiryMinutes] = useState(DEFAULT_EXPIRY_MINUTES);
   const [maxAccesses, setMaxAccesses] = useState(0);
 
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [validationMessage, setValidationMessage] = useState('');
+  const submitLock = useRef(false); // blocks duplicate submissions instantly
 
   const handleCreateShare = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
+    if (submitLock.current) return;
+    setValidationMessage('');
 
     if (activeTab === 'files') {
       if (files.length === 0) {
-        setErrorMessage('Please select or drop at least one file to share.');
+        setValidationMessage('Please select or drop at least one file to share.');
         return;
       }
-    } else {
-      if (!text.trim()) {
-        setErrorMessage('Please enter or paste the text you want to share.');
-        return;
-      }
+    } else if (!text.trim()) {
+      setValidationMessage('Please enter or paste the text you want to share.');
+      return;
     }
 
+    submitLock.current = true;
     setIsUploading(true);
 
     try {
       let result;
+      let summary;
+
       if (activeTab === 'text') {
-        result = await api.createTextShare({
-          text,
-          maxAccesses
-        });
+        result = await api.createTextShare({ text, maxAccesses, expiryMinutes });
+        summary = { kind: 'text', preview: text.trim().slice(0, 240), chars: text.length };
       } else {
         const rawFiles = files.map((f) => f.file);
         const paths = files.map((f) => f.relativePath);
@@ -55,80 +59,70 @@ export function SendPage() {
           files: rawFiles,
           paths,
           maxAccesses,
-          onProgress: (prog) => {
-            setUploadProgress(prog);
-          }
+          expiryMinutes,
+          onProgress: (prog) => setUploadProgress(prog)
         });
+        summary = {
+          kind: 'files',
+          files: files.map((f) => ({ name: f.relativePath || f.name, size: f.size })),
+          totalSize: files.reduce((sum, f) => sum + f.size, 0)
+        };
       }
 
-      toast.success('Temporary share created successfully!');
-      // Navigate to share result page
-      navigate(`/share/${result.shareToken}`, { state: { shareData: result } });
+      // Go straight to the Share Ready screen
+      navigate(`/share/${result.shareToken}`, { state: { shareData: { ...result, summary } } });
     } catch (err) {
       console.error('Share creation error:', err);
-      setErrorMessage(err.message || 'Failed to create share. Please try again.');
-      toast.error(err.message || 'Failed to create share.');
-    } finally {
+      toast.error(getFriendlyError(err));
+      submitLock.current = false;
       setIsUploading(false);
       setUploadProgress(null);
     }
   };
 
+  const tabClass = (tab) =>
+    `flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+      activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+    }`;
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12 space-y-6">
-      
+    <div className="mx-auto w-full max-w-2xl px-4 pt-5 pb-0 sm:px-6 sm:pt-7 [@media(min-height:900px)]:sm:pt-12 [@media(min-height:900px)]:sm:pb-6">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
-          Create a Temporary Share
+      <div className="mb-4 text-center sm:mb-5 [@media(min-height:900px)]:sm:mb-8">
+        <h1 className="text-[clamp(1.5rem,4.5vw,2.25rem)] font-bold leading-tight tracking-tight text-white">
+          What do you want to share?
         </h1>
-        <p className="text-sm text-slate-400">
-          Upload files or paste text. Get a 6-digit code and QR code in seconds.
+        <p className="mx-auto mt-1.5 max-w-md text-sm text-slate-400">
+          Add files or text. You'll get an access code and a QR code.
         </p>
       </div>
 
-      {/* Tabs Switcher */}
-      <div className="flex bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800">
-        <button
-          type="button"
-          onClick={() => { setActiveTab('files'); setErrorMessage(''); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'files'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Upload className="w-4 h-4" />
-          Share Files & Folders
-        </button>
+      <form onSubmit={handleCreateShare} noValidate className="space-y-3 sm:space-y-4">
+        {/* Content */}
+        <div className="card space-y-3 p-3 sm:p-4">
+          <div className="flex gap-1 rounded-xl border border-slate-800 bg-slate-950 p-1" role="tablist" aria-label="What to share">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'files'}
+              onClick={() => { setActiveTab('files'); setValidationMessage(''); }}
+              className={tabClass('files')}
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              Files
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'text'}
+              onClick={() => { setActiveTab('text'); setValidationMessage(''); }}
+              className={tabClass('text')}
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              Text
+            </button>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => { setActiveTab('text'); setErrorMessage(''); }}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === 'text'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Share Text
-        </button>
-      </div>
-
-      {/* Error alert */}
-      {errorMessage && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
-      {/* Form Area */}
-      <form onSubmit={handleCreateShare} className="space-y-6">
-        
-        {/* Content Box */}
-        <div className="bg-slate-900/60 rounded-3xl border border-slate-800 p-6 space-y-4">
           {activeTab === 'files' ? (
             <FileUploader files={files} setFiles={setFiles} />
           ) : (
@@ -136,37 +130,43 @@ export function SendPage() {
           )}
         </div>
 
-        {/* Expiry & Access Options */}
+        {/* Expires In + Access Limit */}
         <ExpirySelector
+          expiryMinutes={expiryMinutes}
+          setExpiryMinutes={setExpiryMinutes}
           maxAccesses={maxAccesses}
           setMaxAccesses={setMaxAccesses}
         />
 
-        {/* Live Upload Progress */}
-        {isUploading && uploadProgress && (
-          <ProgressBar progress={uploadProgress} />
+        {validationMessage && (
+          <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-sm text-rose-200">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{validationMessage}</span>
+          </div>
         )}
 
-        {/* Submit Action Button */}
-        <button
-          type="submit"
-          disabled={isUploading}
-          className="w-full py-4 rounded-2xl text-base font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2 transform active:scale-[0.99]"
-        >
-          {isUploading ? (
-            <span className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 animate-spin" />
-              Creating Temporary Share...
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Create Temporary Share
-            </span>
-          )}
-        </button>
-      </form>
+        {isUploading && uploadProgress && <ProgressBar progress={uploadProgress} />}
 
+        {/* Always visible at the bottom of the screen, so Create Share never
+            ends up below the fold on phones or short laptop screens */}
+        <div className="sticky bottom-0 z-10 -mx-4 bg-gradient-to-t from-slate-950 from-75% to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 sm:mx-0 sm:px-0">
+          <button
+            type="submit"
+            disabled={isUploading}
+            aria-busy={isUploading}
+            className="btn btn-primary btn-lg w-full"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                Creating Share…
+              </>
+            ) : (
+              'Create Share'
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

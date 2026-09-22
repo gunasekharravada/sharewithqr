@@ -43,12 +43,12 @@ export function TextEditor({ text, setText, maxChars = 100000 }) {
   return (
     <div className="space-y-3">
       {/* Top action toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-950/40 p-2 rounded-xl border border-slate-800">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setIsMonospace(!isMonospace)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-colors ${
               isMonospace
                 ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'
@@ -64,7 +64,7 @@ export function TextEditor({ text, setText, maxChars = 100000 }) {
             type="button"
             onClick={handleSelectAll}
             disabled={!text}
-            className="px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-40"
+            className="px-3 py-2.5 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-40"
           >
             Select All
           </button>
@@ -72,7 +72,7 @@ export function TextEditor({ text, setText, maxChars = 100000 }) {
             type="button"
             onClick={handleCopy}
             disabled={!text}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-40"
+            className="inline-flex items-center gap-1 px-3 py-2.5 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-40"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             Copy
@@ -81,7 +81,7 @@ export function TextEditor({ text, setText, maxChars = 100000 }) {
             type="button"
             onClick={handleDownloadTxt}
             disabled={!text}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-40"
+            className="inline-flex items-center gap-1 px-3 py-2.5 sm:px-2.5 sm:py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-40"
           >
             <Download className="w-3.5 h-3.5" />
             Download TXT
@@ -90,8 +90,9 @@ export function TextEditor({ text, setText, maxChars = 100000 }) {
             <button
               type="button"
               onClick={handleClear}
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+              className="p-2.5 sm:p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
               title="Clear text"
+              aria-label="Clear text"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -103,15 +104,15 @@ export function TextEditor({ text, setText, maxChars = 100000 }) {
       <div className="relative">
         <textarea
           ref={textareaRef}
+          aria-label="Text to share"
           value={text}
           onChange={(e) => {
             if (e.target.value.length <= maxChars) {
               setText(e.target.value);
             }
           }}
-          placeholder="Paste your text, code snippets, notes, study material, credentials, or commands here..."
-          rows={12}
-          className={`w-full bg-slate-900/80 border border-slate-700/80 rounded-2xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-y ${
+          placeholder="Type or paste the text you want to share…"
+          className={`w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-colors resize-y h-[clamp(7rem,26vh,18rem)] ${
             isMonospace ? 'font-mono text-sm leading-relaxed' : 'font-sans text-sm leading-relaxed'
           }`}
         />

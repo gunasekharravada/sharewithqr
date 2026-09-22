@@ -1,55 +1,39 @@
 import React from 'react';
 import { formatBytes } from '../utils/formatters.js';
-import { UploadCloud, Clock, Zap } from 'lucide-react';
 
 export function ProgressBar({ progress }) {
   if (!progress) return null;
 
   const { loaded, total, percent, speedBytesPerSec, secondsRemaining } = progress;
+  const value = Math.min(100, Math.max(0, percent));
 
   return (
-    <div className="bg-slate-800/90 border border-blue-500/30 rounded-2xl p-5 shadow-2xl space-y-3 backdrop-blur-md">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <UploadCloud className="w-5 h-5 text-blue-400 animate-bounce" />
-          <span className="text-sm font-semibold text-slate-200">
-            Uploading Share...
-          </span>
-        </div>
-        <span className="text-sm font-mono font-bold text-blue-400">
-          {percent}%
-        </span>
+    <div className="card space-y-3 p-4" aria-live="polite">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium text-slate-200">Uploading…</span>
+        <span className="font-mono font-semibold text-blue-300">{value}%</span>
       </div>
 
-      {/* Progress track */}
-      <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-700/60">
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-slate-800"
+        role="progressbar"
+        aria-label="Upload progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={value}
+      >
         <div
-          className="bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-200 ease-out relative"
-          style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
-        >
-          <div className="absolute inset-0 bg-white/20 animate-pulse" />
-        </div>
+          className="h-full rounded-full bg-blue-500 transition-[width] duration-200 ease-out"
+          style={{ width: `${value}%` }}
+        />
       </div>
 
-      {/* Sub metrics */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 pt-1 font-mono">
-        <div>
-          {formatBytes(loaded)} / {formatBytes(total)}
-        </div>
-        <div className="flex items-center gap-4">
-          {speedBytesPerSec > 0 && (
-            <span className="flex items-center gap-1 text-slate-300">
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              {formatBytes(speedBytesPerSec)}/s
-            </span>
-          )}
-          {secondsRemaining > 0 && (
-            <span className="flex items-center gap-1 text-slate-300">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" />
-              {secondsRemaining}s left
-            </span>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 font-mono text-xs text-slate-400">
+        <span>{formatBytes(loaded)} / {formatBytes(total)}</span>
+        <span className="flex items-center gap-3">
+          {speedBytesPerSec > 0 && <span>{formatBytes(speedBytesPerSec)}/s</span>}
+          {secondsRemaining > 0 && <span>{secondsRemaining}s left</span>}
+        </span>
       </div>
     </div>
   );

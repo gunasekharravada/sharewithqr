@@ -14,15 +14,12 @@ let pgPool = null;
 let sqliteDb = null;
 
 if (isPostgres) {
-  pgPool = new pg.Pool({
-    connectionString: config.databaseUrl,
-    ssl: process.env.NODE_ENV === 'production' && !config.databaseUrl.includes('localhost') 
-      ? { rejectUnauthorized: false } 
-      : false,
-    max: 20, // Max pool clients
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000
-  });
+pgPool = new pg.Pool({
+  connectionString: config.databaseUrl,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
+});
 
   pgPool.on('error', (err) => {
     console.error('[DB] Unexpected error on idle PostgreSQL client', err);

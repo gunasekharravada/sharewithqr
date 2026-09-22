@@ -8,6 +8,68 @@
   }
 }
 
+
+@layer base {
+  /* Visible keyboard focus everywhere, without changing mouse behaviour */
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-950;
+  }
+}
+
+/* Small design system: one accent colour, calm surfaces */
+@layer components {
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-lg {
+    @apply min-h-[52px] px-7 text-base;
+  }
+  .btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-500;
+  }
+  .btn-secondary {
+    @apply border border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700;
+  }
+  .btn-ghost {
+    @apply text-slate-300 hover:bg-slate-800 hover:text-white;
+  }
+  .btn-danger {
+    @apply border border-rose-500/30 text-rose-300 hover:bg-rose-500/10;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-800 bg-slate-900/70;
+  }
+  .field {
+    @apply min-h-[44px] w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0;
+  }
+}
+
+/* Short, subtle entrance animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.fade-up { animation: fade-up 0.25s ease-out both; }
+.toast-in { animation: toast-in 0.2s ease-out both; }
+.pop-in { animation: pop-in 0.2s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom glowing and card glass styles */
 .glass-card {
   background: rgba(30, 41, 59, 0.7);

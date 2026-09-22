@@ -6,13 +6,14 @@ const STORAGE_FULL_MESSAGE =
 
 // Turns a failed API response into an Error, recognising the structured codes
 // (STORAGE_LIMIT_REACHED, FILE_TOO_LARGE) so the UI shows a friendly message.
-function buildApiError(data, fallback) {
+function buildApiError(data, fallback, status) {
   const message =
     data?.code === 'STORAGE_LIMIT_REACHED'
       ? STORAGE_FULL_MESSAGE
       : data?.message || data?.error || fallback;
   const err = new Error(message);
   if (data?.code) err.code = data.code;
+  if (status) err.status = status;
   return err;
 }
 
@@ -20,16 +21,16 @@ export const api = {
   /**
    * Create a text share
    */
-  async createTextShare({ text, maxAccesses }) {
+  async createTextShare({ text, maxAccesses, expiryMinutes }) {
     const res = await fetch(`${BASE_URL}/shares/text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, maxAccesses })
+      body: JSON.stringify({ text, maxAccesses, expiryMinutes })
     });
 
     const data = await res.json();
     if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Failed to create text share');
+      throw buildApiError(data, 'Failed to create text share', res.status);
     }
     return data.data;
   },
@@ -37,7 +38,7 @@ export const api = {
   /**
    * Upload multiple files / folder with progress tracking
    */
-  createFilesShare({ files, paths, maxAccesses, onProgress }) {
+  createFilesShare({ files, paths, maxAccesses, expiryMinutes, onProgress }) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       const formData = new FormData();
@@ -51,6 +52,9 @@ export const api = {
       }
 
       formData.append('maxAccesses', maxAccesses || 0);
+      if (expiryMinutes) {
+        formData.append('expiryMinutes', expiryMinutes);
+      }
 
       let startTime = Date.now();
       let lastLoaded = 0;
@@ -89,7 +93,7 @@ export const api = {
           if (xhr.status >= 200 && xhr.status < 300 && data.success) {
             resolve(data.data);
           } else {
-            reject(buildApiError(data, 'Upload failed'));
+            reject(buildApiError(data, 'Upload failed', xhr.status));
           }
         } catch (err) {
           reject(new Error('Invalid response from server'));
@@ -97,7 +101,9 @@ export const api = {
       });
 
       xhr.addEventListener('error', () => {
-        reject(new Error('Network error during upload. Please check your connection.'));
+        const err = new Error('Network error during upload. Please check your connection.');
+        err.code = 'NETWORK_ERROR';
+        reject(err);
       });
 
       xhr.addEventListener('abort', () => {
@@ -121,7 +127,7 @@ export const api = {
 
     const data = await res.json();
     if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Verification failed');
+      throw buildApiError(data, 'Verification failed', res.status);
     }
     return data.data;
   },
@@ -136,9 +142,7 @@ export const api = {
 
     const data = await res.json();
     if (!res.ok || !data.success) {
-      const err = new Error(data.error || 'Failed to retrieve share');
-      err.status = res.status;
-      throw err;
+      throw buildApiError(data, 'Failed to retrieve share', res.status);
     }
     return data.data;
   },

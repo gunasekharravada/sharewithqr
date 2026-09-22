@@ -90,9 +90,11 @@ export const config = {
       10
     ),
 
-  // Share lifetime is fixed at 10 minutes and enforced by the backend.
-  // Intentionally NOT configurable via environment variables or client input.
-  shareExpiryMinutes: 10,
+  // Share lifetime: the backend only accepts these durations (minutes) and
+  // never trusts arbitrary client values. Anything else falls back to the
+  // default. Intentionally NOT configurable via environment variables.
+  shareExpiryOptionsMinutes: [5, 10],
+  shareExpiryDefaultMinutes: 10,
 
   otpMaxAttempts:
     parseInt(

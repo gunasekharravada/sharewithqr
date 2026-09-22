@@ -33,6 +33,26 @@ export function formatTimeRemaining(expiresAt) {
 }
 
 /**
+ * Countdown as m:ss (or h:mm:ss); "Expired" once the time is up.
+ * Used by the Share Ready screen's compact timer badge.
+ */
+export function formatCountdown(expiresAt) {
+  if (!expiresAt) return '';
+  const total = Date.parse(expiresAt) - Date.now();
+  if (total <= 0) return 'Expired';
+
+  const totalSeconds = Math.floor(total / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${minutes}:${pad(seconds)}`;
+}
+
+/**
  * Format text stats (characters, words, lines)
  */
 export function getTextStats(text = '') {

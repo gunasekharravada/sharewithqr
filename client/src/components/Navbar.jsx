@@ -39,7 +39,7 @@ export function Navbar() {
               <Sparkles className="h-5 w-5 text-white" aria-hidden="true" />
             </span>
             <span className="text-lg font-bold tracking-tight text-white">
-              Temp<span className="text-blue-400">Share</span>
+              Share<span className="text-blue-400">Now</span>
             </span>
           </Link>
 

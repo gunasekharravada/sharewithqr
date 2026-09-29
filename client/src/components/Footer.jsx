@@ -15,7 +15,7 @@ export function Footer() {
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <span className="text-lg font-bold text-white tracking-tight">
-                Temp<span className="text-blue-500">Share</span>
+                Share<span className="text-blue-500">Now</span>
               </span>
             </div>
             <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
@@ -23,9 +23,9 @@ export function Footer() {
               Files and text disappear completely once they expire.
             </p>
             <div className="flex items-center gap-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-blue-400" /> Secure Transit</span>
-              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-400" /> Auto-Purge</span>
-              <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-blue-400" /> Zero Signup</span>
+              <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-blue-400" /> Secure File Transfer</span>
+              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-400" /> Auto-Expires</span>
+              <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-blue-400" /> No Signup</span>
             </div>
           </div>
 
@@ -46,17 +46,17 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-slate-400">
               <li><Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link></li>
               <li><Link to="/terms" className="hover:text-blue-400 transition-colors">Terms of Service</Link></li>
-              <li><Link to="/about" className="hover:text-blue-400 transition-colors">About TempShare</Link></li>
+              <li><Link to="/about" className="hover:text-blue-400 transition-colors">About ShareNOw</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} TempShare. All rights reserved. Share Now. Gone When You're Done.</p>
+          <p>© {new Date().getFullYear()} ShareNow. All rights reserved. Share Now. Gone When You're Done.</p>
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Online Temporary Storage Active</span>
+            <span>24/7 Active</span>
           </div>
         </div>
       </div>

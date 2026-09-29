@@ -30,7 +30,7 @@ const CATEGORIES = [
 const BENEFITS = [
   { title: 'No Signup', text: 'Start sharing instantly without creating an account.', icon: UserX },
   { title: 'No App', text: 'Works directly in your browser.', icon: MonitorSmartphone },
-  { title: 'Temporary', text: 'Shares automatically expire after the selected time.', icon: Timer }
+  { title: 'Temporary Access', text: 'Shares automatically expire after the selected time.', icon: Timer }
 ];
 
 const STEPS = [
@@ -42,11 +42,15 @@ const STEPS = [
 const CHARACTERISTICS = [
   'No account required',
   'OTP + QR access',
-  'Temporary expiration',
+   'Temporary access',
+  'No app required',
+ 
   'Private cloud storage',
-  `File size protection (${MAX_FILE_SIZE_MB} MB per file)`,
-  'Access limits',
-  'Automatic cleanup'
+  `File size(${MAX_FILE_SIZE_MB} MB per file)`,
+  
+  'Automatic cleanup',
+  'Up to 10 files per share'
+
 ];
 
 export function Home() {
@@ -55,16 +59,41 @@ export function Home() {
       {/* HERO */}
       <section className="mx-auto max-w-6xl px-4 pb-14 pt-14 text-center sm:px-6 sm:pb-20 sm:pt-20 lg:pt-28">
         {/* Trust badge */}
-        <div className="mx-auto inline-flex max-w-full items-center justify-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-center text-[11px] font-semibold uppercase leading-snug tracking-wider text-blue-400 sm:text-xs">
-          <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span>No Signup • No App • Disappears Automatically</span>
-        </div>
+        {/* Trust badge */}
+<div className="mx-auto flex max-w-full flex-wrap items-center justify-center gap-3">
+  <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-1.5 text-[11px] font-semibold tracking-wide text-blue-300 sm:text-xs">
+    <span
+      className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-[pulse_2.8s_ease-in-out_infinite]"
+      aria-hidden="true"
+    />
+    No Signup
+  </span>
+
+  <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-1.5 text-[11px] font-semibold tracking-wide text-blue-300 sm:text-xs">
+    <span
+      className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-[pulse_2.8s_ease-in-out_infinite]"
+      aria-hidden="true"
+    />
+    No App
+  </span>
+
+  <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-1.5 text-[11px] font-semibold tracking-wide text-blue-300 sm:text-xs">
+    <span
+      className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-[pulse_2.8s_ease-in-out_infinite]"
+      aria-hidden="true"
+    />
+    Auto-Expires
+  </span>
+</div>
+
+
+
 
         <h1 className="mx-auto mt-6 max-w-3xl text-[clamp(2.25rem,7vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-white">
           Share Anything. <span className="text-blue-400">Temporarily.</span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          Send text and files with a simple OTP or QR code. No account. No app. No clutter.
+          Send text and files with a simple OTP or QR code. No account. No app. No tracking.
           Just share it and let it disappear when it expires.
         </p>
 

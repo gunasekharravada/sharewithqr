@@ -9,6 +9,6 @@ export const uploadMiddleware = multer({
   storage,
   limits: {
     fileSize: maxBytes,
-    files: 100 // up to 100 files / folder items
+    files: 10 // up to 100 files / folder items
   }
 });

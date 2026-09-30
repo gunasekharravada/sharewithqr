@@ -7,9 +7,13 @@ export const qrService = {
   async generateDataUrl(text) {
     try {
       return await QRCode.toDataURL(text, {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 300,
+        // High error correction (~30% of the code can be damaged/obscured
+        // and still scan) and a full 4-module quiet zone, per the QR
+        // standard's recommended minimum - both improve reliability across
+        // real-world scanners (Google Lens, iOS/Android camera apps, etc.).
+        errorCorrectionLevel: 'H',
+        margin: 4,
+        width: 320,
         color: {
           dark: '#1e293b',
           light: '#ffffff'
@@ -28,7 +32,8 @@ export const qrService = {
     try {
       return await QRCode.toString(text, {
         type: 'svg',
-        margin: 2,
+        errorCorrectionLevel: 'H',
+        margin: 4,
         color: {
           dark: '#1e293b',
           light: '#ffffff'

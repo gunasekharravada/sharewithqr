@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Navbar } from './components/Navbar.jsx';
 import { Footer } from './components/Footer.jsx';
 import { ToastContainer } from './components/Toast.jsx';
@@ -15,6 +15,12 @@ import { Privacy } from './pages/Privacy.jsx';
 import { Terms } from './pages/Terms.jsx';
 import { Faq } from './pages/Faq.jsx';
 
+// Older links/QR codes used /s/:token; forward them to the canonical route.
+function LegacyShareRedirect() {
+  const { token } = useParams();
+  return <Navigate to={`/share/${token}`} replace />;
+}
+
 export function App() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
@@ -27,8 +33,9 @@ export function App() {
           <Route path="/" element={<Home />} />
           <Route path="/send" element={<SendPage />} />
           <Route path="/receive" element={<ReceivePage />} />
-          <Route path="/share/:token" element={<ShareResult />} />
-          <Route path="/s/:token" element={<ShareView />} />
+          <Route path="/created/:token" element={<ShareResult />} />
+          <Route path="/share/:token" element={<ShareView />} />
+          <Route path="/s/:token" element={<LegacyShareRedirect />} />
           <Route path="/about" element={<About />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/privacy" element={<Privacy />} />

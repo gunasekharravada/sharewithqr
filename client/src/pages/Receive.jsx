@@ -69,7 +69,7 @@ export function ReceivePage() {
 
     try {
       const result = await api.verifyOtp(fullOtp);
-      navigate(`/s/${result.shareToken}`);
+      navigate(`/share/${result.shareToken}`);
     } catch (err) {
       setError(getFriendlyError(err));
       setLoading(false);
@@ -80,13 +80,10 @@ export function ReceivePage() {
     setScannerOpen(false);
     // A TempShare link contains /s/:token
     try {
-      if (decodedText.includes('/s/')) {
-        const parts = decodedText.split('/s/');
-        const token = parts[1]?.split('?')[0]?.split('/')[0];
-        if (token) {
-          navigate(`/s/${token}`);
-          return;
-        }
+      const match = decodedText.match(/\/(?:share|s)\/([A-Za-z0-9_-]+)/);
+      if (match) {
+        navigate(`/share/${match[1]}`);
+        return;
       }
 
       // Or just a 6-digit code
@@ -95,7 +92,7 @@ export function ReceivePage() {
         setDigits(clean.split(''));
         setLoading(true);
         api.verifyOtp(clean).then((res) => {
-          navigate(`/s/${res.shareToken}`);
+          navigate(`/share/${res.shareToken}`);
         }).catch((err) => {
           setError(getFriendlyError(err));
           setLoading(false);
@@ -117,7 +114,7 @@ export function ReceivePage() {
           Receive a Share
         </h1>
         <p className="mx-auto mt-1.5 max-w-sm text-sm text-slate-400">
-          Enter the access code or scan the QR code to open your temporary share.
+          Enter the 6-digit code to open your temporary share.
         </p>
       </div>
 
@@ -197,7 +194,7 @@ export function ReceivePage() {
             Scan QR Code
           </button>
           <p className="text-center text-xs text-slate-500">
-            Uses your camera only to read the code. Nothing is recorded or uploaded.
+            Tip: you can also just open your phone camera and scan the QR code. Nothing is recorded or uploaded.
           </p>
         </div>
       </div>

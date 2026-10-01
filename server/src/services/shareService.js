@@ -17,6 +17,21 @@ function resolveExpiryMinutes(requested) {
     : config.shareExpiryDefaultMinutes;
 }
 
+// Canonical public link for a share. This exact string is what the QR encodes
+// and what "Copy Link" copies: <frontend>/share/<token>.
+function buildShareUrl(shareToken) {
+  return `${config.frontendUrl}/share/${shareToken}`;
+}
+
+// Errors with a stable code/status so the API can answer precisely without
+// the client having to guess from message text.
+function shareError(message, code, statusCode) {
+  const err = new Error(message);
+  err.code = code;
+  err.statusCode = statusCode;
+  return err;
+}
+
 function shareExpiryDate(requestedMinutes) {
   return new Date(Date.now() + resolveExpiryMinutes(requestedMinutes) * 60 * 1000).toISOString();
 }
@@ -90,7 +105,7 @@ export const shareService = {
     // token generated above — it does not need to wait for the database
     // write to finish. Running them together removes one full round trip
     // from Create Share.
-    const shareUrl = `${config.appUrl}/s/${shareToken}`;
+    const shareUrl = buildShareUrl(shareToken);
     const [, qrCode] = await Promise.all([
       db.query(insertQuery, params),
       qrService.generateDataUrl(shareUrl)
@@ -201,7 +216,7 @@ export const shareService = {
     // so it's generated at the same time rather than after every upload
     // finishes. If any upload fails, the reservation and any objects that
     // did finish uploading are removed.
-    const shareUrl = `${config.appUrl}/s/${shareToken}`;
+    const shareUrl = buildShareUrl(shareToken);
     const uploadedKeys = [];
     let qrCode;
     try {
@@ -333,7 +348,7 @@ export const shareService = {
       throw failure;
     }
 
-    const shareUrl = `${config.appUrl}/s/${shareToken}`;
+    const shareUrl = buildShareUrl(shareToken);
     const qrCode = await qrService.generateDataUrl(shareUrl);
 
     return {
@@ -423,7 +438,7 @@ export const shareService = {
     `, [token]);
 
     if (!result.rows || result.rows.length === 0) {
-      throw new Error('Share not found or has expired.');
+      throw shareError('This share link is invalid or no longer available.', 'SHARE_NOT_FOUND', 404);
     }
 
     const share = result.rows[0];
@@ -431,15 +446,15 @@ export const shareService = {
     // Check expiration
     if (new Date() > new Date(share.expires_at) || share.status === 'expired') {
       await db.query(`UPDATE shares SET status = 'expired' WHERE id = $1`, [share.id]);
-      throw new Error('Share expired. This temporary share is no longer available.');
+      throw shareError('This temporary share has expired.', 'SHARE_EXPIRED', 410);
     }
 
     if (share.status === 'burned') {
-      throw new Error('This share was burned after its previous access and is no longer available.');
+      throw shareError('This share is no longer available.', 'SHARE_UNAVAILABLE', 410);
     }
 
     if (share.status !== 'active') {
-      throw new Error('This share is no longer active.');
+      throw shareError('This share is no longer available.', 'SHARE_UNAVAILABLE', 410);
     }
 
     assertNoLegacyPin(share);
@@ -447,7 +462,7 @@ export const shareService = {
     // Check access limits
     if (share.max_accesses > 0 && share.access_count >= share.max_accesses) {
       await db.query(`UPDATE shares SET status = 'expired' WHERE id = $1`, [share.id]);
-      throw new Error('This share has reached its maximum access limit.');
+      throw shareError('This share has reached its maximum access limit.', 'SHARE_UNAVAILABLE', 410);
     }
 
     // Increment access count atomically
@@ -528,7 +543,7 @@ export const shareService = {
 
     const share = result.rows[0];
 
-    if (new Date() > new Date(share.expires_at) || share.status === 'expired') {
+    if (new Date() > new Date(share.expires_at) || share.status !== 'active') {
       throw new Error('Share expired.');
     }
 
@@ -583,7 +598,7 @@ export const shareService = {
 
     const share = result.rows[0];
 
-    if (new Date() > new Date(share.expires_at) || share.status === 'expired') {
+    if (new Date() > new Date(share.expires_at) || share.status !== 'active') {
       throw new Error('Share expired.');
     }
 

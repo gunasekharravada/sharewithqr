@@ -120,10 +120,24 @@ export const shareController = {
         data: result
       });
     } catch (err) {
-      const status = err.message.includes('expired') || err.message.includes('burned') ? 410 : 400;
-      return res.status(status).json({
+      // Known share states carry a code/status; anything else is a real
+      // server fault and must not leak internals to the receiver.
+      if (err.code && err.statusCode) {
+        return res.status(err.statusCode).json({
+          success: false,
+          code: err.code,
+          error: err.message
+        });
+      }
+      // Legacy PIN shares fail closed with a plain Error - keep that a 410.
+      if (/no longer (available|supported)/i.test(err.message)) {
+        return res.status(410).json({ success: false, code: 'SHARE_UNAVAILABLE', error: 'This share is no longer available.' });
+      }
+      console.error('[Share] getShare failed:', err);
+      return res.status(500).json({
         success: false,
-        error: err.message
+        code: 'SERVER_ERROR',
+        error: 'Something went wrong. Please try again in a moment.'
       });
     }
   },

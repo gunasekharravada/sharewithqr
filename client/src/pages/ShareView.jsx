@@ -5,12 +5,32 @@ import { formatBytes, formatTimeRemaining, getTextStats } from '../utils/formatt
 import { api } from '../services/api.js';
 import { toast } from '../utils/toast.js';
 
+// Maps API failures to the receiver-facing messages. Raw backend text is never shown.
+function describeShareError(err) {
+  const code = err?.code;
+  const status = err?.status;
+
+  if (code === 'SHARE_EXPIRED') {
+    return { title: 'Share Expired', message: 'This temporary share has expired.' };
+  }
+  if (code === 'SHARE_NOT_FOUND' || status === 404) {
+    return { title: 'Share Not Found', message: 'This share link is invalid or no longer available.' };
+  }
+  if (code === 'SHARE_UNAVAILABLE' || status === 410) {
+    return { title: 'Share Not Found', message: 'This share link is invalid or no longer available.' };
+  }
+  if (!status || err instanceof TypeError) {
+    return { title: 'Unable to Load Share', message: 'Please check your internet connection and try again.' };
+  }
+  return { title: 'Something Went Wrong', message: 'Please try again in a moment.' };
+}
+
 export function ShareView() {
   const { token } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [shareData, setShareData] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null); // { title, message }
 
   const [timeLeft, setTimeLeft] = useState('');
   const [copiedText, setCopiedText] = useState(false);
@@ -18,12 +38,12 @@ export function ShareView() {
   const fetchShareContent = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError(null);
 
       const data = await api.getShare(token);
       setShareData(data);
     } catch (err) {
-      setError(err.message || 'Share not found or has expired.');
+      setError(describeShareError(err));
     } finally {
       setLoading(false);
     }
@@ -35,6 +55,21 @@ export function ShareView() {
     }
   }, [token]);
 
+  // Private share pages must never be indexed or leak the link via Referer.
+  useEffect(() => {
+    const robots = document.createElement('meta');
+    robots.name = 'robots';
+    robots.content = 'noindex, nofollow';
+    const referrer = document.createElement('meta');
+    referrer.name = 'referrer';
+    referrer.content = 'no-referrer';
+    document.head.append(robots, referrer);
+    return () => {
+      robots.remove();
+      referrer.remove();
+    };
+  }, []);
+
   // Live countdown timer
   useEffect(() => {
     if (!shareData?.expiresAt) return;
@@ -43,7 +78,7 @@ export function ShareView() {
       const remaining = formatTimeRemaining(shareData.expiresAt);
       setTimeLeft(remaining);
       if (remaining === 'Expired') {
-        setError('This temporary share has expired.');
+        setError({ title: 'Share Expired', message: 'This temporary share has expired.' });
       }
     };
 
@@ -98,8 +133,8 @@ export function ShareView() {
   if (loading) {
     return (
       <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
-        <Sparkles className="w-10 h-10 text-blue-500 mx-auto animate-spin" />
-        <p className="text-base text-slate-300 font-medium">Retrieving temporary share...</p>
+        <Sparkles className="w-10 h-10 text-blue-500 mx-auto animate-spin" aria-hidden="true" />
+        <p role="status" className="text-base text-slate-300 font-medium">Opening Share...</p>
       </div>
     );
   }
@@ -111,8 +146,8 @@ export function ShareView() {
           <AlertCircle className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">Share Unavailable</h2>
-          <p className="text-sm text-slate-400">{error}</p>
+          <h2 className="text-2xl font-bold text-white">{error.title}</h2>
+          <p className="text-sm text-slate-400">{error.message}</p>
         </div>
         <Link
           to="/"
@@ -121,6 +156,15 @@ export function ShareView() {
           <ArrowLeft className="w-4 h-4" />
           Back to TempShare
         </Link>
+        {(error.title === 'Unable to Load Share' || error.title === 'Something Went Wrong') && (
+          <button
+            type="button"
+            onClick={fetchShareContent}
+            className="block mx-auto text-sm font-semibold text-blue-400 hover:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+          >
+            Try again
+          </button>
+        )}
       </div>
     );
   }
@@ -138,7 +182,7 @@ export function ShareView() {
           </div>
           <div>
             <h1 className="text-base sm:text-lg font-bold text-white">
-              Shared by TempShare
+              Share Found ✓
             </h1>
             <p className="text-xs text-slate-400">
               {shareData?.shareType === 'files'
@@ -182,10 +226,10 @@ export function ShareView() {
             {shareData.fileCount > 1 && (
               <a
                 href={api.getDownloadAllUrl(token)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-500/20 transition-all active:scale-95"
+                className="inline-flex min-h-[44px] items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-500/20 transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
               >
                 <FolderArchive className="w-4 h-4" />
-                Download All as ZIP
+                Download All
               </a>
             )}
           </div>
@@ -211,7 +255,7 @@ export function ShareView() {
 
                 <a
                   href={api.getDownloadUrl(token, file.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                  className="shrink-0 inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5 text-blue-400" />
                   Download

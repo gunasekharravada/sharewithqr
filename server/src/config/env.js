@@ -9,6 +9,28 @@ dotenv.config({
   path: path.resolve(__dirname, '../../.env')
 });
 
+// Normalises a URL/origin: trims whitespace and trailing slashes.
+const normalizeUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
+
+// Public frontend URL used inside QR codes and share links.
+// Precedence: FRONTEND_URL > APP_URL > CLIENT_URL > local dev default.
+const frontendUrl = normalizeUrl(
+  process.env.FRONTEND_URL ||
+  process.env.APP_URL ||
+  process.env.CLIENT_URL ||
+  'http://localhost:5173'
+);
+
+// Origins allowed by CORS (comma-separated values are supported).
+const allowedOrigins = [
+  ...new Set(
+    [process.env.FRONTEND_URL, process.env.CLIENT_URL, process.env.APP_URL]
+      .flatMap((v) => String(v || '').split(','))
+      .map(normalizeUrl)
+      .filter(Boolean)
+  )
+];
+
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
 
@@ -124,8 +146,19 @@ export const config = {
       10
     ),
 
-  appUrl:
-    process.env.APP_URL ||
-    process.env.CLIENT_URL ||
-    'http://localhost:5173'
+  // Public frontend base URL (no trailing slash) - what QR codes point to.
+  frontendUrl,
+  appUrl: frontendUrl,
+  allowedOrigins
 };
+
+// A QR pointing at localhost/http is useless to a receiver's phone, so make
+// a misconfigured production deployment impossible to miss in the logs.
+if (config.nodeEnv === 'production') {
+  if (!/^https:\/\//i.test(frontendUrl) || /localhost|127\.0\.0\.1/i.test(frontendUrl)) {
+    console.error(
+      `[Config] FRONTEND_URL is "${frontendUrl}". QR codes need the public HTTPS frontend URL ` +
+      '(e.g. https://your-domain.com). Set FRONTEND_URL on the backend.'
+    );
+  }
+}

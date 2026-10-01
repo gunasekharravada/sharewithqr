@@ -70,7 +70,7 @@ export function SendPage() {
       }
 
       // Go straight to the Share Ready screen
-      navigate(`/share/${result.shareToken}`, { state: { shareData: { ...result, summary } } });
+      navigate(`/created/${result.shareToken}`, { state: { shareData: { ...result, summary } } });
     } catch (err) {
       console.error('Share creation error:', err);
       toast.error(getFriendlyError(err));
